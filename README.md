@@ -21,6 +21,18 @@ wget run https://raw.githubusercontent.com/tamayaren/Minepanda/main/install.lua
 
 You can skip the question with `... install.lua server` or `... install.lua client`. Run the same command again to update; saved menus and orders are kept.
 
+### Client on a community OS
+
+The client also comes as one self-contained file, [`dist/minepanda.lua`](dist/minepanda.lua), for operating systems that install apps their own way:
+
+```
+wget https://raw.githubusercontent.com/tamayaren/Minepanda/main/dist/minepanda.lua
+```
+
+Put it wherever the OS keeps apps and start it with the OS's launcher or autostart. It doesn't depend on the CraftOS shell's `require`, keeps its data next to itself (`/apps/minepanda.lua` saves to `/apps/data/minepanda.db`), and starts rednet's background service itself if the OS doesn't. It's laid out for the 26×20 pocket screen, so give it a window at least that big.
+
+The server is only available through the installer above.
+
 ## Restaurant (server)
 
 On first start you name the restaurant. The name becomes the computer's label, and no two restaurants can share one.
@@ -47,6 +59,14 @@ minepanda/server.lua   Restaurant program
 minepanda/client.lua   Customer program
 minepanda/lib/ui.lua   Shared clickable UI toolkit
 minepanda/lib/common.lua  Shared protocol, prices and storage
+dist/minepanda.lua     Single-file client, generated
+tools/bundle-client.js Builds dist/minepanda.lua
 ```
 
 Data is saved in `/minepanda/data/` on each computer.
+
+`dist/minepanda.lua` is generated, so don't edit it by hand. After changing the client or its libraries, rebuild it with [Node.js](https://nodejs.org/) and commit the result:
+
+```bash
+node tools/bundle-client.js
+```

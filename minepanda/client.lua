@@ -2,7 +2,27 @@
 local Common = require("lib.common")
 local UI = require("lib.ui")
 
-local DataPath = "/minepanda/data/client.db"
+-- This program's own path, so its data can live beside it wherever an OS installs it.
+local function ProgramPath()
+	if (shell and shell.getRunningProgram) then
+		return "/" .. shell.getRunningProgram()
+	end
+
+	if (debug and debug.getinfo) then
+		local Source = debug.getinfo(1, "S").source
+		if (type(Source) == "string" and Source:sub(1, 1) == "@") then
+			return "/" .. fs.combine(Source:sub(2), "")
+		end
+	end
+
+	return "/minepanda/client.lua"
+end
+
+-- /minepanda/client.lua keeps data in /minepanda/data/client.db, /apps/minepanda.lua in /apps/data/minepanda.db.
+local ProgramFile = ProgramPath()
+local ProgramName = fs.getName(ProgramFile):gsub("%.lua$", "")
+local DataPath = fs.combine(fs.combine(fs.getDir(ProgramFile), "data"), ProgramName .. ".db")
+
 local SearchTime = 1.5
 local RequestTimeout = 3
 local SyncInterval = 60
@@ -735,6 +755,12 @@ end
 
 local function UILoop()
 	Draw()
+	SearchShops()
+	if (CountPending() > 0) then
+		SyncOrders(true)
+	end
+
+	Draw()
 	while (true) do
 		local Event, A, B, C = os.pullEvent()
 		if (Event == "mouse_click") then
@@ -774,6 +800,15 @@ local function NetworkLoop()
 				end
 			end
 		end
+	end
+end
+
+-- Some community OSes don't start rednet's background daemon, so nothing would ever arrive.
+-- rednet.run errors straight away when the system already runs one; then this just idles.
+local function RednetDaemon()
+	pcall(rednet.run)
+	while (true) do
+		os.pullEvent("MinepandaIdle")
 	end
 end
 
@@ -832,14 +867,7 @@ local function Main()
 
 	UI.Init()
 	WaitForModem()
-
-	Draw()
-	SearchShops()
-	if (CountPending() > 0) then
-		SyncOrders(true)
-	end
-
-	parallel.waitForAny(UILoop, NetworkLoop, SyncLoop)
+	parallel.waitForAny(RednetDaemon, UILoop, NetworkLoop, SyncLoop)
 end
 
 local Success, Result = pcall(Main)
